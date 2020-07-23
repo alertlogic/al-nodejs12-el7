@@ -1,0 +1,191 @@
+#################
+#
+# Author:      Des Jones (dejones@alertlogic.com)
+# Project:     defender automation
+# Date:        Mon 11 Nov 15:59:15 GMT 2019
+# Version:     1.0
+#
+###################################################
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: pipeline for al-nodejs12-el7 rpm deployment 1.0
+ 
+Parameters:
+  S3RepoMasterBucket:
+    Description: SSM Parameter for master repo bucket
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: S3RepoMasterBucket
+  MGRName:
+    Default: jay-crampton
+    Description: Managers name for tagging resources
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9-]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  OwnerName:
+    Default: datastores
+    Description: Resource owners name for tagging resources
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9-]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  Subnets:
+    Type: AWS::SSM::Parameter::Value<List<String>>
+    Default: DsaopsPrivateSubnets
+    Description: The list of SubnetIds in your Virtual Private Cloud (VPC)
+    ConstraintDescription: >-
+      must be a list of at least two existing subnets associated with at least
+      two different availability zones. They should be residing in the selected
+      Virtual Private Cloud.
+  VpcId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: DsaopsVPC
+    Description: The ID of the Amazon Virtual Private Cloud (VPC) to use for Amazon EC2 instances.
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref AWS::StackName
+              - s3
+        - Key: base-stack-name
+          Value: !Ref AWS::StackName
+        - Key: base-stack-id
+          Value: !Ref AWS::StackId
+        - Key: Mgr
+          Value: !Ref MGRName
+        - Key: Owner
+          Value: !Ref OwnerName
+        - Key: Service
+          Value: s3
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for codebuild container
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref AWS::StackName
+              - do-not-delete
+        - Key: base-stack-name
+          Value: !Ref AWS::StackName
+        - Key: base-stack-id
+          Value: !Ref AWS::StackId
+        - Key: Mgr
+          Value: !Ref MGRName
+        - Key: Owner
+          Value: !Ref OwnerName
+        - Key: Service
+          Value: sg
+      VpcId: !Ref VpcId
+  ServerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: -1
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+        - ServerSecurityGroup
+        - GroupId
+      GroupId:
+        Fn::GetAtt:
+        - ServerSecurityGroup
+        - GroupId   
+  ToolChainRole:
+    Description: Creating toolchain role in IAM for Amazon EC2 instances
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - codebuild.amazonaws.com
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AWSCodeBuildAdminAccess
+      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:*
+            Resource:
+            - !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3Bucket
+            - !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3Bucket
+                - '/*'
+          - Effect: Allow
+            Action:
+            - s3:ListBucket
+            - s3:Get*
+            - s3:Put*
+            Resource:
+            - !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3RepoMasterBucket
+            - !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3RepoMasterBucket
+                - '/*'
+        PolicyName: !Ref AWS::StackName
+      RoleName: !Ref AWS::StackName
+    Type: AWS::IAM::Role
+  CodeBuildProject:
+    Properties:
+      Artifacts:
+        Location: !Ref S3Bucket
+        Path: !Join
+          - '-'
+          - - !Ref AWS::StackName
+        NamespaceType: BUILD_ID
+        Packaging: NONE
+        Type: S3
+      Name: !Join
+        - '-'
+        - - !Ref AWS::StackName
+      Description: !Join
+        - '-'
+        - - !Ref AWS::StackName
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        EnvironmentVariables:
+        - Name: S3REPOBUCKET
+          Value: !Ref S3RepoMasterBucket
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:2.0
+        Type: LINUX_CONTAINER
+      ServiceRole: !Ref ToolChainRole
+      SourceVersion: master
+      Source:
+        Type: GITHUB
+        Location: https://github.com/alertlogic/al-nodejs12-el7.git
+      Triggers:
+        Webhook: true
+        FilterGroups:
+          - - Type: EVENT
+              Pattern: PULL_REQUEST_MERGED
+      VpcConfig:
+        VpcId: !Ref VpcId
+        Subnets: !Ref Subnets
+        SecurityGroupIds:
+          - Fn::GetAtt:
+            - ServerSecurityGroup
+            - GroupId
+    Type: AWS::CodeBuild::Project

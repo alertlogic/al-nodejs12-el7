@@ -1,0 +1,41 @@
+#################
+#
+# Author:      Des Jones (dejones@alertlogic.com)
+# Project:     defender automation
+# Date:        Mon 11 Nov 15:59:15 GMT 2019
+# Version:     1.0
+# 
+###################################################
+
+version: 0.2
+
+env:
+  variables:
+    PROD_RELEASE: "" # if not empty, release to production
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+  build:
+    commands:
+      - date | tee -a install.txt
+      - uname -a | tee -a install.txt
+      - curl -s https://checkip.amazonaws.com | tee -a install.txt
+      - env | tee -a install.txt
+      - getent passwd | tee -a install.txt
+      - rpm -qa | tee -a install.txt
+      - set -o pipefail && ./install.sh | tee -a install.txt && ./build.sh 2>&1 | tee build.txt && ./unit.sh 2>&1 | tee unit.txt && ./deploy.sh 2>&1 | tee deploy.txt
+
+
+artifacts:
+  files:
+    - install.txt
+    - unit.txt
+    - build.txt
+    - deploy.txt
+    - BUILD/**/*
+    - BUILDROOT/**/*
+    - RPMS/**/*
+    - SRPMS/**/*
+    - SOURCES/**/*

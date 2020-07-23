@@ -1,0 +1,78 @@
+#################
+#
+# Author:      Des Jones (dejones@alertlogic.com)
+# Project:     defender automation
+# Date:        Sat 14 Mar 12:45:14 GMT 2020
+# Version:     1.0
+#
+###################################################
+
+version: 1.0
+service_name: al-nodejs12-el7
+ 
+stages:
+  -
+    name: build
+    when:
+      - tag: ['al-\d+.\d+.\d+.\d+']
+      - cli: build
+      - pull_request:
+          trigger_phrase: build
+    image: centos:7
+    compute_size: small
+    env:
+      S3REPOBUCKET: s3repomaster.dsaops.alertlogic.net
+    input:
+      repo: alertlogic/al-nodejs12-el7
+    commands:
+      - date | tee -a install.txt
+      - uname -a | tee -a install.txt
+      - curl -s https://checkip.amazonaws.com | tee -a install.txt
+      - env | tee -a install.txt
+      - getent passwd | tee -a install.txt
+      - rpm -qa | tee -a install.txt
+      - set -o pipefail && ./install.sh | tee -a install.txt && ./build.sh 2>&1 | tee build.txt && ./unit.sh 2>&1 | tee unit.txt
+      - tar -zcf build.tar *.txt BUILD/ BUILDROOT/ RPMS/ SRPMS/ SPECS/ SOURCES/
+    outputs:
+      file: build.tar
+
+  -
+    name: release
+    when:
+      - tag: ['al-\d+.\d+.\d+.\d+']
+      - cli: release
+      - pull_request:
+          trigger_phrase: release
+          merge_on_success: true
+    image: centos:7
+    compute_size: small
+    env:
+      S3REPOBUCKET: s3repomaster.dsaops.alertlogic.net
+    input:
+      repo: alertlogic/al-nodejs12-el7
+    assume_role_arn: arn:aws:iam::408088353512:role/s3repomaster-ALPSAccessrole-1V1YFTIRUSNYM
+    commands:
+      - yum install python3-pip -y
+      - pip3 install awscli
+      - ./install.sh && ./build.sh && ./unit.sh && ./deploy.sh
+
+  -
+    name: release_rfc
+    when:
+      - tag: ['al-\d+.\d+.\d+.\d+']
+      - cli: release_rfc
+      - pull_request:
+          trigger_phrase: release rfc
+          merge_on_success: true
+    image: centos:7
+    compute_size: small
+    env:
+      S3REPOBUCKET: s3repomaster.dsaops.alertlogic.net
+      PROD_RELEASE: rfc
+    input:
+      repo: alertlogic/al-nodejs12-el7
+    assume_role_arn: arn:aws:iam::408088353512:role/s3repomaster-ALPSAccessrole-1V1YFTIRUSNYM
+    commands:
+      - yum install python3-pip -y
+      - pip3 install awscli
+      - ./install.sh && ./build.sh && ./unit.sh && ./deploy.sh
