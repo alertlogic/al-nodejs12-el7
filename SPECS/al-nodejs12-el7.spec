@@ -40,24 +40,22 @@ VERSION=%{version}
 
 # install/update logic
 if [ "${1}" == 1 ]; then # if install
-  for arg in $(ls /opt/rh/rh-ruby24/root/bin/*); do
+  for arg in $(ls /opt/rh/rh-nodejs12/root/usr/bin/*); do
     bin=$(basename $arg)
-    ln -sf $arg /usr/bin/${bin}24
+    ln -sf $arg /usr/bin/${bin}12
     if [ ! -f /usr/bin/${bin} ]; then
       ln -s $arg /usr/bin/${bin}
     fi
   done
-  # update libraries
-  ldconfig
-  # install gems
-  /usr/local/sbin/al-ruby24-gem-install.sh || echo "Could not download gems! Please run /usr/local/sbin/al-ruby24-gem-install.sh" 1>&2
+  
   echo "script installed and ran sucessfully" 1>&2
 elif [ "${1}" == 2 ]; then # if update
-  # update libraries
-  ldconfig
+
   echo "script updated and ran sucessfully" 1>&2
 fi
 
+# update libraries
+ldconfig
 # if update or install
 echo "install or update ran succesfully" 1>&2
 EOF
