@@ -64,6 +64,7 @@ EOF
 
 %install
 cp -R {usr,etc}/ %{buildroot}/
+mkdir -p %{buildroot}/usr/local/sbin/
 install -m 755 %{name}.sh %{buildroot}/usr/local/sbin/%{name}.sh
 
 %files
