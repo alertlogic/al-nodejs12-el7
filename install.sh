@@ -6,3 +6,4 @@ yum install -y redhat-lsb-core sudo wget bash curl gpg2 which git source vim
 yum groupinstall -y 'Development Tools'
 yum install -y rpmdevtools rpmlint createrepo yum-utils
 # add dependancy repos here
+yum install -y centos-release-scl || yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/centos-release-scl-rh-2-3.el7.centos.noarch.rpm

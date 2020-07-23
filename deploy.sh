@@ -5,6 +5,13 @@ if [ -z "${CODEBUILD_BUILD_IMAGE}" ]; then
   exit 0
 fi
 
+# download latest external dependancies
+mkdir -p RPMS/{x86_64,noarch}/
+yumdownloader --destdir=RPMS/x86_64/ \
+  rh-nodejs12-nodejs \
+  rh-nodejs12-npm \
+  rh-nodejs12-runtime
+
 # upload files
 DISTRIBUTION="el7"
 RELEASE_DIRS="dev"
