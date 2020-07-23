@@ -78,10 +78,10 @@ install -m 755 %{name}.sh %{buildroot}/usr/local/sbin/%{name}.sh
 %preun
 if [ $1 == 0 ]; then
   # remove symlinks
-  for arg in $(ls /opt/rh/rh-ruby24/root/bin/*); do
+  for arg in $(ls /opt/rh/rh-nodejs12/root/usr/bin/*); do
     bin=$(basename $arg)
-    if [ "$(readlink /usr/bin/${bin}24)" == "${arg}" ]; then
-      rm -f /usr/bin/${bin}24
+    if [ "$(readlink /usr/bin/${bin}12)" == "${arg}" ]; then
+      rm -f /usr/bin/${bin}12
     fi
     if [ "$(readlink /usr/bin/${bin})" == "${arg}" ]; then
         rm -f /usr/bin/${bin}
