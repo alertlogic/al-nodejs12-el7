@@ -51,6 +51,7 @@ if [ "${1}" == 1 ]; then # if install
   if ! egrep -q "^\s*MANDATORY_MANPATH\s*/opt/rh/rh-nodejs12/root/usr/share/man\s*$" /etc/man_db.conf; then
     echo "MANDATORY_MANPATH                       /opt/rh/rh-nodejs12/root/usr/share/man" >> /etc/man_db.conf
   fi
+  ln -s /opt/rh/rh-nodejs12/enable /etc/profile.d/al-nodejs12-el7.sh
   echo "script installed and ran sucessfully" 1>&2
 elif [ "${1}" == 2 ]; then # if update
 
@@ -59,6 +60,7 @@ fi
 
 # update libraries
 ldconfig
+source /etc/profile.d/al-nodejs12-el7.sh
 # if update or install
 echo "install or update ran succesfully" 1>&2
 EOF
@@ -90,6 +92,9 @@ if [ $1 == 0 ]; then
     fi
     if [ "$(readlink /usr/bin/${bin})" == "${arg}" ]; then
         rm -f /usr/bin/${bin}
+    fi
+    if [ -L /etc/profile.d/al-nodejs12-el7.sh ]; then
+      rm -f /etc/profile.d/al-nodejs12-el7.sh
     fi
   done
 fi
