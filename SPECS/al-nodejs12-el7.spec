@@ -59,8 +59,8 @@ elif [ "${1}" == 2 ]; then # if update
 fi
 
 # update libraries
-ldconfig
 source /etc/profile.d/al-nodejs12-el7.sh
+ldconfig
 # if update or install
 echo "install or update ran succesfully" 1>&2
 EOF
